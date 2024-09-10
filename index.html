@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>모두의 퀴즈</title>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        #cardContainer {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 30px;
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        .card {
+            width: calc(33.33% - 30px);
+            min-width: 200px;
+            height: 150px;
+            background-color: #fff;
+            border-radius: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            font-size: 24px;
+            font-weight: bold;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+        }
+
+        #quizContainer {
+            margin-top: 30px;
+            text-align: center;
+            width: 100%;
+            max-width: 800px;
+            background-color: #fff;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #questionText {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        #answerInput {
+            padding: 10px;
+            font-size: 18px;
+            width: 100%;
+            max-width: 400px;
+            margin-bottom: 20px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+        }
+
+        #submitAnswer {
+            padding: 10px 20px;
+            font-size: 18px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        #submitAnswer:hover {
+            background-color: #45a049;
+        }
+
+        #addQuestion {
+            margin-top: 30px;
+            padding: 15px 30px;
+            font-size: 18px;
+            background-color: #008CBA;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        #addQuestion:hover {
+            background-color: #007B9A;
+        }
+
+        .swal2-popup {
+            font-size: 1.6rem !important;
+        }
+
+        .swal2-popup .swal2-title {
+            font-size: 2rem !important;
+        }
+
+        #questionType,
+        #newQuestion,
+        #newAnswer {
+            width: 100% !important;
+            max-width: 300px !important;
+            margin: 10px auto !important;
+        }
+
+        .swal2-popup {
+            font-size: 1.6rem !important;
+        }
+
+        .swal2-popup .swal2-title {
+            font-size: 2rem !important;
+        }
+
+        #questionType,
+        #newQuestion,
+        #newAnswer {
+            width: 100% !important;
+            max-width: 300px !important;
+            margin: 10px auto !important;
+        }
+
+        /* 과목 드롭박스 스타일 */
+        .large-select {
+            font-size: 1.2rem !important;
+            padding: 10px !important;
+        }
+
+        /* 새로운 문제 입력란 스타일 */
+        .large-textarea {
+            font-size: 1.2rem !important;
+            padding: 10px !important;
+            min-height: 100px !important;
+            resize: vertical !important;
+        }
+
+        @media (max-width: 768px) {
+            .card {
+                width: calc(50% - 30px);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .card {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <h1>모두의 퀴즈</h1>
+    <div id="cardContainer"></div>
+    <div id="quizContainer" style="display:none;">
+        <p id="questionText"></p>
+        <input type="text" id="answerInput" placeholder="답을 입력하세요">
+        <button id="submitAnswer">확인</button>
+    </div>
+    <button id="addQuestion">문제 추가</button>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const subjects = ['국어', '영어', '수학', '과학', '역사', '체육'];
+            const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F'];
+            let questions = [];
+            let currentQuestionIndex = 0;
+            let score = 0;
+            const SCRIPT_ID = 'AKfycbzejKpBJtYqO6kOMlvXQidTaEzsvzbwwpTcjFPpuf-PzcT-ttvmv5qLJZGSvK-TzEDa';
+            const SHEET_ID = '1MY5D6pBaFfVfQMkX8gvAng8qdzdlNvzU5HNQJRKiP5A';
+
+            function createCards() {
+                const cardContainer = document.getElementById('cardContainer');
+                subjects.forEach((subject, index) => {
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    card.textContent = subject;
+                    card.style.backgroundColor = colors[index];
+                    card.addEventListener('click', () => selectSubject(subject));
+                    cardContainer.appendChild(card);
+                });
+            }
+
+            function selectSubject(subject) {
+                fetchQuestions(subject);
+            }
+
+            function fetchQuestions(topic) {
+                const url = `https://script.google.com/macros/s/${SCRIPT_ID}/exec?action=getQuestions&sheetId=${SHEET_ID}&topic=${topic}`;
+                fetch(url)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.error) {
+                            throw new Error(data.error);
+                        }
+                        console.log("받은 데이터:", data);
+
+                        if (Array.isArray(data)) {
+                            questions = data;
+                        } else if (data.questions && Array.isArray(data.questions)) {
+                            questions = data.questions;
+                        } else {
+                            throw new Error('Unexpected data structure');
+                        }
+
+                        console.log("처리된 questions:", questions);
+                        console.log("문제 개수:", questions.length);
+
+                        if (questions.length >= 10) {
+                            questions = questions.sort(() => 0.5 - Math.random()).slice(0, 10);
+                            startQuiz();
+                        } else {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: '문제 수 부족',
+                                text: `${topic} 주제의 문제가 ${questions.length}개 있습니다. 10개 미만이어서 퀴즈를 시작할 수 없습니다. 다른 주제를 선택하거나 문제를 추가해주세요.`
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        Swal.fire({
+                            icon: 'error',
+                            title: '오류 발생',
+                            text: `문제를 가져오는데 실패했습니다. 오류 메시지: ${error.message}`
+                        });
+                    });
+            }
+
+            function startQuiz() {
+                currentQuestionIndex = 0;
+                score = 0;
+                document.getElementById('cardContainer').style.display = 'none';
+                document.getElementById('quizContainer').style.display = 'block';
+                showQuestion();
+            }
+
+            function showQuestion() {
+                if (currentQuestionIndex < questions.length) {
+                    document.getElementById('questionText').textContent = questions[currentQuestionIndex].question;
+                    document.getElementById('answerInput').value = '';
+                } else {
+                    showFinalScore();
+                }
+            }
+
+            document.getElementById('submitAnswer').addEventListener('click', submitAnswer);
+            document.getElementById('answerInput').addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    submitAnswer();
+                }
+            });
+
+            function submitAnswer() {
+                const userAnswer = document.getElementById('answerInput').value.trim();
+                const correctAnswer = questions[currentQuestionIndex].answer.trim();
+                const isCorrect = userAnswer.toLowerCase() === correctAnswer.toLowerCase();
+
+                if (isCorrect) {
+                    score++;
+                    Swal.fire({
+                        icon: 'success',
+                        title: '정답입니다!',
+                        text: 'O',
+                        timer: 1000,
+                        showConfirmButton: false
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: '틀렸습니다.',
+                        text: 'X',
+                        timer: 1000,
+                        showConfirmButton: false
+                    });
+                }
+
+                setTimeout(() => {
+                    currentQuestionIndex++;
+                    showQuestion();
+                }, 1000);
+            }
+
+            function showFinalScore() {
+                Swal.fire({
+                    title: '퀴즈 결과',
+                    text: `총점: ${score} / 10`,
+                    icon: 'info',
+                    confirmButtonText: '확인'
+                }).then(() => {
+                    document.getElementById('quizContainer').style.display = 'none';
+                    document.getElementById('cardContainer').style.display = 'flex';
+                });
+            }
+
+            document.getElementById('addQuestion').addEventListener('click', () => {
+                Swal.fire({
+                    title: '새 문제 추가',
+                    html:
+                        '<select id="questionType" class="swal2-select large-select">' +
+                        '<option value="국어">국어</option>' +
+                        '<option value="영어">영어</option>' +
+                        '<option value="수학">수학</option>' +
+                        '<option value="과학">과학</option>' +
+                        '<option value="역사">역사</option>' +
+                        '<option value="체육">체육</option>' +
+                        '</select>' +
+                        '<textarea id="newQuestion" class="swal2-textarea large-textarea" placeholder="새로운 문제"></textarea>' +
+                        '<input id="newAnswer" class="swal2-input" placeholder="답">',
+                    focusConfirm: false,
+                    preConfirm: () => {
+                        return {
+                            type: document.getElementById('questionType').value,
+                            question: document.getElementById('newQuestion').value,
+                            answer: document.getElementById('newAnswer').value
+                        }
+                    },
+                    width: '500px', // 팝업창 너비 증가
+                    customClass: {
+                        input: 'large-select',
+                        textarea: 'large-textarea'
+                    },
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const {type, question, answer} = result.value;
+                        if (question && answer) {
+                            addNewQuestion(type, question, answer);
+                        } else {
+                            Swal.fire('오류', '모든 필드를 채워주세요.', 'error');
+                        }
+                    }
+                });
+            });
+
+            function addNewQuestion(type, question, answer) {
+                const url = `https://script.google.com/macros/s/${SCRIPT_ID}/exec`;
+                const data = new FormData();
+                data.append('action', 'addQuestion');
+                data.append('sheetId', SHEET_ID);
+                data.append('type', type);
+                data.append('question', question);
+                data.append('answer', answer);
+
+                fetch(url, {method: 'POST', body: data})
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.success) {
+                            Swal.fire('성공', '문제가 성공적으로 추가되었습니다.', 'success');
+                        } else {
+                            throw new Error('문제 추가에 실패했습니다.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        Swal.fire('오류', '문제 추가에 실패했습니다. 다시 시도해주세요.', 'error');
+                    });
+            }
+
+            createCards();
+        });
+    </script>
+</body>
+
+</html>
